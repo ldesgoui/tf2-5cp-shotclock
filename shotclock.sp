@@ -2,6 +2,7 @@
 
 #include <sourcemod>
 #include <sdktools>
+#include <halflife>
 
 #define PLUGIN_VERSION "0.1.0"
 #define RED 2
@@ -18,11 +19,13 @@ public Plugin:myinfo =
 };
 
 enum {
-    RED_CAPTURED_SECOND = 0,
+    MIDDLE_UNTOUCHED = -1,
+    RED_CAPTURED_LAST = 0,
+    RED_CAPTURED_SECOND,
     RED_CAPTURED_MIDDLE,
-    MIDDLE_UNTOUCHED,
     BLU_CAPTURED_MIDDLE,
-    BLU_CAPTURED_SECOND
+    BLU_CAPTURED_SECOND,
+    BLU_CAPTURED_LAST
 }
 
 new g_state = MIDDLE_UNTOUCHED;
@@ -48,7 +51,7 @@ public OnPluginStart()
 }
 
 public Action:Event_PointCaptured(Handle: event, const String: name[], bool: dontBroadcast) {
-    g_state = GetEventInt(event, "cp") + ( GetEventInt(event, "team") == RED ? -1 : 1 );
+    g_state = GetEventInt(event, "cp") + ( GetEventInt(event, "team") == RED ? 0 : 1 );
     CreateTimer(0.01, updateTime);
 }
 
@@ -72,20 +75,29 @@ public Action:Event_RoundWin(Handle: event, const String: name[], bool: dontBroa
         SetTeamScore(BLU, GetTeamScore(BLU) + GetConVarInt(g_score_middle));
     } else if (g_state == BLU_CAPTURED_SECOND) {
         SetTeamScore(BLU, GetTeamScore(BLU) + GetConVarInt(g_score_second));
+    } else {
+        PrintToChatAll("UNKNOWN WIN CASE winner:%i state:%i", team, g_state);
     }
+    PrintToChatAll("Round ended, score: RED %i - %i BLU", GetTeamScore(RED), GetTeamScore(BLU));
 }
 
 Action updateTime(Handle timer) {
     KillTimer(timer);
-    if (g_state == RED_CAPTURED_SECOND || g_state == BLU_CAPTURED_SECOND) {
-        setTime(GetConVarInt(g_time_last));
+    if (g_state == MIDDLE_UNTOUCHED) {
+        setTime(GetConVarInt(g_time_middle));
     } else if (g_state == RED_CAPTURED_MIDDLE || g_state == BLU_CAPTURED_MIDDLE) {
         setTime(GetConVarInt(g_time_second));
+    } else if (g_state == RED_CAPTURED_SECOND || g_state == BLU_CAPTURED_SECOND) {
+        setTime(GetConVarInt(g_time_last));
+    } else if (g_state != RED_CAPTURED_LAST && g_state != BLU_CAPTURED_LAST) {
+        PrintToChatAll("UNKNOWN CAP CASE state:%i", g_state);
     }
 }
 
 void setTime(int time) {
     new timer = FindEntityByClassname(-1, "team_round_timer");
+
+    PrintToChatAll("Shot Clock set to %i:%02i", time / 60, time % 60);
 
     if (timer > -1) {
         SetVariantInt(time);
