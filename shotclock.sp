@@ -7,8 +7,15 @@
 #define PLUGIN_VERSION "0.1.0"
 #define RED 2
 #define BLU 3
+#define MIDDLE_UNTOUCHED -1
+#define RED_CAPTURED_LAST 0
+#define RED_CAPTURED_SECOND 1
+#define RED_CAPTURED_MIDDLE 2
+#define BLU_CAPTURED_MIDDLE 3
+#define BLU_CAPTURED_SECOND 4
+#define BLU_CAPTURED_LAST 5
 
-public Plugin:myinfo =
+public Plugin myinfo =
 {
     name = "5CP Shot Clock",
     author = "twiikuu",
@@ -18,91 +25,100 @@ public Plugin:myinfo =
     // thanks to ChrisWalkerTalker, GEMM, neto
 };
 
-enum {
-    MIDDLE_UNTOUCHED = -1,
-    RED_CAPTURED_LAST = 0,
-    RED_CAPTURED_SECOND,
-    RED_CAPTURED_MIDDLE,
-    BLU_CAPTURED_MIDDLE,
-    BLU_CAPTURED_SECOND,
-    BLU_CAPTURED_LAST
-}
+static int g_state = MIDDLE_UNTOUCHED;
+static Handle g_enabled = INVALID_HANDLE;
+static Handle g_score_last = INVALID_HANDLE;
+static Handle g_score_middle = INVALID_HANDLE;
+static Handle g_score_second = INVALID_HANDLE;
+static Handle g_time_last = INVALID_HANDLE;
+static Handle g_time_middle = INVALID_HANDLE;
+static Handle g_time_second = INVALID_HANDLE;
 
-new g_state = MIDDLE_UNTOUCHED;
-new Handle: g_score_last = INVALID_HANDLE;
-new Handle: g_score_middle = INVALID_HANDLE;
-new Handle: g_score_second = INVALID_HANDLE;
-new Handle: g_time_last = INVALID_HANDLE;
-new Handle: g_time_middle = INVALID_HANDLE;
-new Handle: g_time_second = INVALID_HANDLE;
-
-public OnPluginStart()
+public void OnPluginStart()
 {
-    CreateConVar("sm_shotclock_version", PLUGIN_VERSION, "5CP Shot Clock Version", FCVAR_PLUGIN | FCVAR_SPONLY | FCVAR_REPLICATED | FCVAR_NOTIFY);
-    g_score_last = CreateConVar("sm_shotclock_score_last", "4", "", _, true, 1, false, 0);
-    g_score_second = CreateConVar("sm_shotclock_score_second", "2", "", _, true, 0, false, 0);
-    g_score_middle = CreateConVar("sm_shotclock_score_middle", "1", "", _, true, 0, false, 0);
-    g_time_last = CreateConVar("sm_shotclock_time_last", "60", "", _, true, 0, false, 0);
-    g_time_second = CreateConVar("sm_shotclock_time_second", "120", "", _, true, 0, false, 0);
-    g_time_middle = CreateConVar("sm_shotclock_time_middle", "305", "", _, true, 0, false, 0);
+    CreateConVar("sm_shotclock_version", PLUGIN_VERSION, "5CP Shot Clock Version", FCVAR_SPONLY | FCVAR_REPLICATED | FCVAR_NOTIFY);
+    g_enabled      = CreateConVar("sm_shotclock",              "0",   "", FCVAR_NOTIFY, true, 0.0, true,  1.0);
+    g_score_last   = CreateConVar("sm_shotclock_score_last",   "4",   "", FCVAR_NOTIFY, true, 1.0, false, 0.0);
+    g_score_second = CreateConVar("sm_shotclock_score_second", "2",   "", FCVAR_NOTIFY, true, 0.0, false, 0.0);
+    g_score_middle = CreateConVar("sm_shotclock_score_middle", "1",   "", FCVAR_NOTIFY, true, 0.0, false, 0.0);
+    g_time_last    = CreateConVar("sm_shotclock_time_last",    "60",  "", FCVAR_NOTIFY, true, 0.0, false, 0.0);
+    g_time_second  = CreateConVar("sm_shotclock_time_second",  "120", "", FCVAR_NOTIFY, true, 0.0, false, 0.0);
+    g_time_middle  = CreateConVar("sm_shotclock_time_middle",  "305", "", FCVAR_NOTIFY, true, 0.0, false, 0.0);
     HookEvent("teamplay_point_captured", Event_PointCaptured);
     HookEvent("teamplay_round_start", Event_RoundStart);
     HookEvent("teamplay_round_win", Event_RoundWin);
 }
 
-public Action:Event_PointCaptured(Handle: event, const String: name[], bool: dontBroadcast) {
+public void Event_PointCaptured(Event event, const char[] name, bool dontBroadcast) {
+    if (!GetConVarBool(g_enabled)) { return ; }
+
     g_state = GetEventInt(event, "cp") + ( GetEventInt(event, "team") == RED ? 0 : 1 );
-    CreateTimer(0.01, updateTime);
+    CreateTimer(0.0, updateTime);
 }
 
-public Action:Event_RoundStart(Handle: event, const String: name[], bool: dontBroadcast) {
-    setTime(GetConVarInt(g_time_middle));
+public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast) {
+    if (!GetConVarBool(g_enabled)) { return ; }
+
     g_state = MIDDLE_UNTOUCHED;
+    setTime(g_time_middle);
 }
 
-public Action:Event_RoundWin(Handle: event, const String: name[], bool: dontBroadcast) {
+public void Event_RoundWin(Event event, const char[] name, bool dontBroadcast) {
+    if (!GetConVarBool(g_enabled)) { return ; }
+
     new team = GetEventInt(event, "team");
 
     // TODO: Show this on end of round screen
 
-    if (team != 0) {
-        SetTeamScore(team, GetTeamScore(team) + GetConVarInt(g_score_last) - 1);
-    } else if (g_state == RED_CAPTURED_SECOND) {
-        SetTeamScore(RED, GetTeamScore(RED) + GetConVarInt(g_score_second));
-    } else if (g_state == RED_CAPTURED_MIDDLE) {
-        SetTeamScore(RED, GetTeamScore(RED) + GetConVarInt(g_score_middle));
-    } else if (g_state == BLU_CAPTURED_MIDDLE) {
-        SetTeamScore(BLU, GetTeamScore(BLU) + GetConVarInt(g_score_middle));
-    } else if (g_state == BLU_CAPTURED_SECOND) {
-        SetTeamScore(BLU, GetTeamScore(BLU) + GetConVarInt(g_score_second));
+    if (team == 0) {
+        switch (g_state) {
+            case MIDDLE_UNTOUCHED:
+                {}
+            case RED_CAPTURED_MIDDLE:
+                SetTeamScore(RED, GetTeamScore(RED) + GetConVarInt(g_score_middle));
+            case BLU_CAPTURED_MIDDLE:
+                SetTeamScore(BLU, GetTeamScore(BLU) + GetConVarInt(g_score_middle));
+            case RED_CAPTURED_SECOND:
+                SetTeamScore(RED, GetTeamScore(RED) + GetConVarInt(g_score_second));
+            case BLU_CAPTURED_SECOND:
+                SetTeamScore(BLU, GetTeamScore(BLU) + GetConVarInt(g_score_second));
+            default:
+                PrintToChatAll("UNKNOWN WIN CASE winner:%i state:%i", team, g_state);
+        }
     } else {
-        PrintToChatAll("UNKNOWN WIN CASE winner:%i state:%i", team, g_state);
+        SetTeamScore(team, GetTeamScore(team) + GetConVarInt(g_score_last) - 1);
     }
     PrintToChatAll("Round ended, score: RED %i - %i BLU", GetTeamScore(RED), GetTeamScore(BLU));
 }
 
-Action updateTime(Handle timer) {
+static Action updateTime(Handle timer) {
     KillTimer(timer);
-    if (g_state == MIDDLE_UNTOUCHED) {
-        setTime(GetConVarInt(g_time_middle));
-    } else if (g_state == RED_CAPTURED_MIDDLE || g_state == BLU_CAPTURED_MIDDLE) {
-        setTime(GetConVarInt(g_time_second));
-    } else if (g_state == RED_CAPTURED_SECOND || g_state == BLU_CAPTURED_SECOND) {
-        setTime(GetConVarInt(g_time_last));
-    } else if (g_state != RED_CAPTURED_LAST && g_state != BLU_CAPTURED_LAST) {
-        PrintToChatAll("UNKNOWN CAP CASE state:%i", g_state);
+
+    switch (g_state) {
+        case MIDDLE_UNTOUCHED:
+            setTime(g_time_middle);
+        case RED_CAPTURED_MIDDLE:
+            setTime(g_time_second);
+        case BLU_CAPTURED_MIDDLE:
+            setTime(g_time_second);
+        case RED_CAPTURED_SECOND:
+            setTime(g_time_last);
+        case BLU_CAPTURED_SECOND:
+            setTime(g_time_last);
+        default:
+            PrintToChatAll("UNKNOWN CAP CASE state:%i", g_state);
     }
 }
 
-void setTime(int time) {
-    new timer = FindEntityByClassname(-1, "team_round_timer");
-
-    PrintToChatAll("Shot Clock set to %i:%02i", time / 60, time % 60);
+static void setTime(Handle convar) {
+    int time = GetConVarInt(convar);
+    int timer = FindEntityByClassname(-1, "team_round_timer");
 
     if (timer > -1) {
         SetVariantInt(time);
         AcceptEntityInput(timer, "SetTime");
+        PrintToChatAll("Shot Clock set to %i:%02i", time / 60, time % 60);
     } else {
-        // Not found ?
+        PrintToChatAll("Shot Clock could not be set, round timer not found.");
     }
 }
