@@ -105,6 +105,10 @@ static Action updateTime(Handle timer) {
             setTime(g_time_last);
         case BLU_CAPTURED_SECOND:
             setTime(g_time_last);
+        case RED_CAPTURED_LAST:
+            {}
+        case BLU_CAPTURED_LAST:
+            {}
         default:
             PrintToChatAll("UNKNOWN CAP CASE state:%i", g_state);
     }
