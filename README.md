@@ -48,7 +48,9 @@ I do not feel this is a massive issue, forcing a stalemate is not fool-proof, th
 
 - Failing a push of this type completely would allow for the enemy team to push back Middle and 2nd for little to no risk. The net worth of this transaction is -3 for the previously attacking team (-1 for losing control of middle, -2 for losing control of 2nd). Compared to original 5CP, this is a big change and might force slower play altogether.
 
-### An insentive to push out of last was created, but it's not easier.
+### An insentive to push out of last was created, but it's not easier
+
+This seems to be out of the scope of what this plugin can offer.
 
 ### Time constraints add to the mind play: Deciding to push from 2nd to Last
 
