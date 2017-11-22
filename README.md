@@ -2,6 +2,12 @@
 
 Make round timers shorter based on point control, reward points for map control whenever these timers run out.
 
+Basically:
+- Round starts with 5 minutes on the clock
+- Red caps middle, 2 minutes on the clock. If it runs out, round ends and Red gets 1 point.
+- Red caps enemy 2nd, 1 minutes on the clock. If it runs out, round ends and Red gets 2 point.
+- Red caps enemy last, they get 4 points.
+
 -Download latest release from https://github.com/ldesgoui/tf2-5cp-shotclock/releases to steam/steamapps/common/Team Fortress 2 Dedicated Server/tf and unzip it.
 
 ## Commands:
@@ -55,3 +61,5 @@ This seems to be out of the scope of what this plugin can offer.
 ### Backcaps are even more powerful
 
 ### Changes might positively affect League/Tournament play but might not be enjoyable for lobbies/pick-up games
+
+### Golden caps will become quasi non-existant
