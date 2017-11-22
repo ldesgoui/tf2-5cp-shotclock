@@ -8,7 +8,7 @@ Basically:
 - Red caps enemy 2nd, 1 minutes on the clock. If it runs out, round ends and Red gets 2 point.
 - Red caps enemy last, they get 4 points.
 
--Download latest release from https://github.com/ldesgoui/tf2-5cp-shotclock/releases to steam/steamapps/common/Team Fortress 2 Dedicated Server/tf and unzip it.
+Download latest release from https://github.com/ldesgoui/tf2-5cp-shotclock/releases to steam/steamapps/common/Team Fortress 2 Dedicated Server/tf and unzip it.
 
 ## Commands:
 ```
