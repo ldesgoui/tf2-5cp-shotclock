@@ -1,12 +1,11 @@
 #pragma semicolon 1
+#pragma newdecls required
 
 #include <sourcemod>
 #include <sdktools>
-#include <halflife>
+#include <tf2>
 
 #define PLUGIN_VERSION "0.1.0"
-#define RED 2
-#define BLU 3
 #define MIDDLE_UNTOUCHED -1
 #define RED_CAPTURED_LAST 0
 #define RED_CAPTURED_SECOND 1
@@ -15,8 +14,7 @@
 #define BLU_CAPTURED_SECOND 4
 #define BLU_CAPTURED_LAST 5
 
-public Plugin myinfo =
-{
+public Plugin myinfo = {
     name = "5CP Shot Clock",
     author = "twiikuu",
     description = "Reduce round timers and attribute points to whichever are holding offensive points",
@@ -34,8 +32,7 @@ static Handle g_time_last = INVALID_HANDLE;
 static Handle g_time_middle = INVALID_HANDLE;
 static Handle g_time_second = INVALID_HANDLE;
 
-public void OnPluginStart()
-{
+public void OnPluginStart() {
     CreateConVar("sm_shotclock_version", PLUGIN_VERSION, "5CP Shot Clock Version", FCVAR_SPONLY | FCVAR_REPLICATED | FCVAR_NOTIFY);
     g_enabled      = CreateConVar("sm_shotclock",              "0",   "", FCVAR_NOTIFY, true, 0.0, true,  1.0);
     g_score_last   = CreateConVar("sm_shotclock_score_last",   "4",   "", FCVAR_NOTIFY, true, 1.0, false, 0.0);
@@ -52,7 +49,7 @@ public void OnPluginStart()
 public void Event_PointCaptured(Event event, const char[] name, bool dontBroadcast) {
     if (!GetConVarBool(g_enabled)) { return ; }
 
-    g_state = GetEventInt(event, "cp") + ( GetEventInt(event, "team") == RED ? 0 : 1 );
+    g_state = GetEventInt(event, "cp") + ( GetEventInt(event, "team") == TFTeam_Red ? 0 : 1 );
     CreateTimer(0.0, updateTime);
 }
 
@@ -66,29 +63,29 @@ public void Event_RoundStart(Event event, const char[] name, bool dontBroadcast)
 public void Event_RoundWin(Event event, const char[] name, bool dontBroadcast) {
     if (!GetConVarBool(g_enabled)) { return ; }
 
-    new team = GetEventInt(event, "team");
+    int team = GetEventInt(event, "team");
 
     // TODO: Show this on end of round screen
 
-    if (team == 0) {
+    if (team == TFTeam_Unassigned) {
         switch (g_state) {
             case MIDDLE_UNTOUCHED:
                 {}
             case RED_CAPTURED_MIDDLE:
-                SetTeamScore(RED, GetTeamScore(RED) + GetConVarInt(g_score_middle));
+                SetTeamScore(TFTeam_Red, GetTeamScore(TFTeam_Red) + GetConVarInt(g_score_middle));
             case BLU_CAPTURED_MIDDLE:
-                SetTeamScore(BLU, GetTeamScore(BLU) + GetConVarInt(g_score_middle));
+                SetTeamScore(TFTeam_Blue, GetTeamScore(TFTeam_Blue) + GetConVarInt(g_score_middle));
             case RED_CAPTURED_SECOND:
-                SetTeamScore(RED, GetTeamScore(RED) + GetConVarInt(g_score_second));
+                SetTeamScore(TFTeam_Red, GetTeamScore(TFTeam_Red) + GetConVarInt(g_score_second));
             case BLU_CAPTURED_SECOND:
-                SetTeamScore(BLU, GetTeamScore(BLU) + GetConVarInt(g_score_second));
+                SetTeamScore(TFTeam_Blue, GetTeamScore(TFTeam_Blue) + GetConVarInt(g_score_second));
             default:
                 PrintToChatAll("UNKNOWN WIN CASE winner:%i state:%i", team, g_state);
         }
     } else {
         SetTeamScore(team, GetTeamScore(team) + GetConVarInt(g_score_last) - 1);
     }
-    PrintToChatAll("Round ended, score: RED %i - %i BLU", GetTeamScore(RED), GetTeamScore(BLU));
+    PrintToChatAll("Round ended, score: RED %i - %i BLU", GetTeamScore(TFTeam_Red), GetTeamScore(TFTeam_Blue));
 }
 
 static Action updateTime(Handle timer) {

@@ -2,9 +2,7 @@
 
 Make round timers shorter based on point control, reward points for map control whenever these timers run out.
 
-## Usage:
-
-Put .smx file in tf/addons/sourcemod/scripting
+-Download latest release from https://github.com/ldesgoui/tf2-5cp-shotclock/releases to steam/steamapps/common/Team Fortress 2 Dedicated Server/tf and unzip it.
 
 ## Commands:
 ```
